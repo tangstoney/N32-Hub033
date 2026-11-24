@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+	],
+	"settings": {
+		"cortex-debug.JLinkGDBServerPath": "C:\\Program Files\\SEGGER\\JLink\\JLinkGDBServerCL.exe",
+		"cortex-debug.armToolchainPath": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\gcc-arm-none-eabi\\bin",
+		"cortex-debug.gdbPath": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\gcc-arm-none-eabi\\bin\\arm-none-eabi-gdb.exe",
+		"cortex-debug.objdumpPath": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\gcc-arm-none-eabi\\bin\\arm-none-eabi-objdump.exe",
+		"cortex-debug.openocdPath": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\openocd\\bin\\openocd.exe",
+		"cortex-debug.variableUseNaturalFormat": false,
+		"terminal.integrated.env.windows": {
+			"N32STUDIO_GCC_BIN": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\gcc-arm-none-eabi\\bin",
+			"N32STUDIO_JLINK_BIN": "C:\\Program Files\\SEGGER\\JLink",
+			"N32STUDIO_MAKE_BIN": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\make",
+			"N32STUDIO_OPENOCD_BIN": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\openocd\\bin",
+			"N32STUDIO_TOOLCHAIN_ROOT": "C:\\Users\\tangshi\\.n32studio\\Toolchain",
+			"PATH": "C:\\Users\\tangshi\\.n32studio\\Toolchain\\make;C:\\Users\\tangshi\\.n32studio\\Toolchain\\gcc-arm-none-eabi\\bin;C:\\Users\\tangshi\\.n32studio\\Toolchain\\openocd\\bin;C:\\Program Files\\SEGGER\\JLink;${env:PATH}"
+		},
+		"powershell.cwd": "rd91_hub033"
+	}
+}
