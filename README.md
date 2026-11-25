@@ -19,6 +19,7 @@
 | B08 | 段码屏 3×TM1621B | ✅ 已实现（移植已验证驱动） | `lcd test` / `lcd all` |
 | B05 | IMU QMI8A01z | ⏳ **模块未到货** | `imu` 返回 not found |
 | B09 | 报警业务 | ✅ 已实现 | 雷达有人 → `voice loop 8`，无人 → `voice stop` |
+| B10 | 充电 SGM41512 | ✅ I2C 驱动 + 状态/故障 | `chg` / `chg reg 0x0B` |
 | B03 | BLE 广播/连接 | ✅ M1：`N32-Hub` + `0xFFE0/E1/E2` | nRF Connect 写 FFE2 → FFE1 回显 |
 
 ---
@@ -61,7 +62,7 @@ build/rd91_hub033.elf / .hex / .bin / .map
 
 | text | data | bss | Flash 合计 | RAM 合计 |
 |---|---|---|---|---|
-| 33,288 | 116 | 4,508 | ~33.4 KB / 512 KB (6.5%) | ~4.5 KB / 48 KB (9.4%) |
+| 39,136 | 120 | 4,524 | ~39.3 KB / 512 KB (7.7%) | ~4.6 KB / 48 KB (9.7%) |
 
 > 已链接 BLE ROM 协议栈（`USE_BLE_ROM_API` + `src/ble/rom_symbols.s`）。
 > BLE 栈固定占用 `0x20000000–0x20003FFF` 的 16KB，应用 RAM 从 `0x20004000`
@@ -131,6 +132,14 @@ USART1（PB6/PB7）→ 板上 U2 的 USB 虚拟串口，**115200 8N1**。
  alarm on|off      - arm / disarm
  alarm smoke on|off - simulate smoke input
  alarm panic on|off - simulate remote panic
+ chg               - charger status + key regs
+ chg init          - re-init/config SGM41512
+ chg reg <hex>     - read one register
+ chg set <hex> <hex> - write one register
+ chg scan          - scan I2C1 bus
+ chg cur <mA>      - set charge current (nearest code)
+ chg in <mA>       - set input current limit
+ log <on|off>      - async sensor/voice logs
 =========================================
 ```
 
@@ -168,11 +177,40 @@ USART1（PB6/PB7）→ 板上 U2 的 USB 虚拟串口，**115200 8N1**。
 
 M1 只做透传回显；A5/A6 协议和 HELLO/STATUS 在 M2。
 
-> **2026-11-24 当前状态**：广播/连接已通，手机能看到 `N32-Hub` 和 `FFE0`。
-> `FFE2` 写入 → `FFE1` 回显**尚未验证**；`hub_app.c` 里保留了 write/notify 调试打印，
-> 下一步用手机往 FFE2 写字节，看串口是否出现 `[ble] write h=2 len=N` /
-> `[ble] rx N: ..` / `[ble] notify N -> conidx X`。
-> 最新源码已编译（约 33.7KB），但最后 NS-Link 已断开，未烧录；接上后先跑 `tools\flash.ps1`。
+---
+
+## 4.2 充电管理 SGM41512（I2C1）
+
+| 项 | 值 |
+|---|---|
+| I2C | I2C1，**PA1=SCL / PA0=SDA**，AF4，400kHz |
+| 地址 | 7-bit `0x1A`（8-bit 写 0x34 / 读 0x35） |
+| 上拉 | SDA/SCL 4.7k 到 3.3V（模块自带就不用外加） |
+| 共地 | 必须 |
+
+默认配置：输入限流 2A、充电 1.5A、4.208V、看门狗关闭、OVP 14V。
+
+```text
+chg                  # 状态 + 故障 + 关键寄存器
+chg init             # 重新初始化/写默认配置
+chg reg 0x0B         # 读器件信息（SGM41512S PN=1111 -> 0x78 左右）
+chg set 0x02 0xB4    # 写充电电流（例：0xB4 = 1980mA）
+chg scan             # 扫 I2C1（EVKIT 应看到 0x1A）
+chg cur 1500         # 充电电流，选最近档并回报实际值（64 档，非线性）
+chg in 2000          # 输入限流，100mA 一档（线性）
+log off / log on     # 关/开雷达/语音/报警/充电异步日志
+```
+
+状态：`no-input / charging / done / disabled / fault`；故障位 `wd / boost / chrg / bat / ntc`。
+`charger_poll()` 每 500ms 读一次，状态变化打印 `[chg] ...`；业务侧可直接用
+`charger_is_charging()` / `charger_is_fault()`。
+
+> 充电与 IMU 共用 I2C1 总线：充电 0x1A，IMU 0x6A/0x6B，地址不冲突。
+
+> **2026-11-25 当前状态**：`N32-Hub` 广播/连接、FFE0/FFE1/FFE2 已通；
+> FFE2 写入 → FFE1 notify 回显已在手机验证（`[ble] write h=2` / `[ble] rx` / `[ble] notify`）。
+> 下一步：M2 私有协议（A5/A6 + HELLO/STATUS/EVENT）。
+> 充电 SGM41512 已读通（part=0x79）；EVKIT 的 I2C 上拉前提是 **JP7 拔掉、TP15 接 3.3V**。
 
 ---
 
@@ -186,6 +224,7 @@ M1 只做透传回显；A5/A6 协议和 HELLO/STATUS 在 M2。
 | **雷达 OUT** | **PA2** | 浮空输入 + 双边沿 EXTI；VCC 5V（板载 USB 5V），共地 |
 | **语音 HM01** | **PB4(TX)→模块RX，PB5(RX)←模块TX** | USART2，AF3，115200；无 BUSY |
 | **段码屏** | **PC0=DATA, PC1=WR, PC2/3/4=CS1/2/3, PC5=BLK** | VDD **3.3V**，不要 5V |
+| **充电 SGM41512** | **PA1=SCL / PA0=SDA** | I2C1，AF4，400kHz，地址 0x1A；共地，4.7k 上拉 |
 | IMU（未到） | PA0/PA1 + PC6 | I2C1 AF4，0x6A/0x6B |
 
 ---
@@ -214,6 +253,8 @@ M1 只做透传回显；A5/A6 协议和 HELLO/STATUS 在 M2。
 - **B03/B13 BLE（M1 已完成）**：`N32-Hub` 广播、16-bit `0xFFE0/FFE1(notify)/FFE2(write)`、
   写→notify 回显。M2：A5/A6 分片 + CRC8 + HELLO/STATUS；M3：Hub central（Fob/Smoke）。
 - **B05 IMU**：模块到货后补 `imu.c` 的配置与采样。
+- **B10 充电**：SGM41512 I2C 驱动、状态/故障已实现；业务侧先用
+  `charger_is_charging()` / `charger_is_fault()`，BLE/UI 通知待接。
 - **B09 报警业务**：已实现雷达条件 → `voice loop 8`、条件解除 → `voice stop`；
   `alarm on/off` 布防/撤防，`alarm smoke/panic on|off` 可模拟输入。
   注意：布防状态下报警业务占用语音口，手工测语音先 `alarm off`。

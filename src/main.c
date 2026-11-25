@@ -25,7 +25,9 @@
 #include "tick.h"
 #include "retarget.h"
 #include "alarm.h"
+#include "charger.h"
 #include "ble_app.h"
+#include "logctl.h"
 #include "rwip.h"
 
 #include "log.h"
@@ -84,6 +86,9 @@ int main(void)
         }
     }
 
+    /* 充电管理 SGM41512：I2C1 PA1/PA0，地址 0x1A */
+    charger_init();
+
     printf("\r\n");
     console_init();
     console_help();
@@ -100,11 +105,16 @@ int main(void)
         evt = radar_poll();
         alarm_on_radar_event(evt);
         alarm_poll();
+        charger_poll();
 
         if (evt == RADAR_EVT_PRESENT) {
-            printf("\r\n[radar] present\r\n> ");
+            if (logctl_enabled()) {
+                printf("\r\n[radar] present\r\n> ");
+            }
         } else if (evt == RADAR_EVT_ABSENT) {
-            printf("\r\n[radar] absent\r\n> ");
+            if (logctl_enabled()) {
+                printf("\r\n[radar] absent\r\n> ");
+            }
         }
     }
 }

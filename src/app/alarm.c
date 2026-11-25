@@ -15,6 +15,7 @@
 #include "radar.h"
 #include "voice.h"
 #include "tick.h"
+#include "logctl.h"
 
 #define ALARM_TRACK        VOICE_IDX_ALARM   /* 8 */
 #define ALARM_POLL_MS      20U
@@ -69,7 +70,9 @@ void alarm_poll(void)
         voice_ret_t ret = voice_loop((uint16_t)ALARM_TRACK);
         if (ret == VOICE_OK) {
             s_looping = true;
-            printf("[alarm] condition -> loop %u\r\n", (unsigned)ALARM_TRACK);
+            if (logctl_enabled()) {
+                printf("[alarm] condition -> loop %u\r\n", (unsigned)ALARM_TRACK);
+            }
         }
         /* ERR_BUSY: 下一轮再试，不在这里忙等 */
         return;
@@ -79,7 +82,9 @@ void alarm_poll(void)
         voice_ret_t ret = voice_stop();
         if (ret == VOICE_OK) {
             s_looping = false;
-            printf("[alarm] clear -> stop\r\n");
+            if (logctl_enabled()) {
+                printf("[alarm] clear -> stop\r\n");
+            }
         }
     }
 }
@@ -90,7 +95,9 @@ void alarm_set_armed(bool on)
         return;
     }
     s_armed = on;
-    printf("[alarm] %s\r\n", on ? "armed" : "disarmed");
+    if (logctl_enabled()) {
+        printf("[alarm] %s\r\n", on ? "armed" : "disarmed");
+    }
 }
 
 bool alarm_is_armed(void)
@@ -102,7 +109,9 @@ void alarm_set_smoke(bool on)
 {
     if (s_smoke != on) {
         s_smoke = on;
-        printf("[alarm] smoke %s\r\n", on ? "on" : "off");
+        if (logctl_enabled()) {
+            printf("[alarm] smoke %s\r\n", on ? "on" : "off");
+        }
     }
 }
 
@@ -110,7 +119,9 @@ void alarm_set_panic(bool on)
 {
     if (s_panic != on) {
         s_panic = on;
-        printf("[alarm] panic %s\r\n", on ? "on" : "off");
+        if (logctl_enabled()) {
+            printf("[alarm] panic %s\r\n", on ? "on" : "off");
+        }
     }
 }
 

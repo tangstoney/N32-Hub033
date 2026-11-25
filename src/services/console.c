@@ -16,6 +16,8 @@
 #include "imu.h"
 #include "tick.h"
 #include "alarm.h"
+#include "charger.h"
+#include "logctl.h"
 #include "n32wb033.h"
 #include "n32wb033_usart.h"
 
@@ -59,6 +61,14 @@ void console_help(void)
     printf(" alarm on|off      - arm / disarm\r\n");
     printf(" alarm smoke on|off - simulate smoke input\r\n");
     printf(" alarm panic on|off - simulate remote panic\r\n");
+    printf(" chg               - charger status + key regs\r\n");
+    printf(" chg init          - re-init/config SGM41512\r\n");
+    printf(" chg reg <hex>     - read one register\r\n");
+    printf(" chg scan          - scan I2C1 bus\r\n");
+    printf(" chg set <hex> <hex> - write one register\r\n");
+    printf(" chg cur <mA>      - set charge current (nearest code)\r\n");
+    printf(" chg in <mA>       - set input current limit\r\n");
+    printf(" log <on|off>      - async sensor/voice logs\r\n");
     printf("=========================================\r\n");
 }
 
@@ -252,6 +262,105 @@ static void cmd_alarm(char *a1, char *a2)
     }
 }
 
+static void cmd_charger(char *a1, char *a2, char *a3)
+{
+    if (a1 == NULL) {
+        charger_dump();
+        return;
+    }
+
+    if (strcmp(a1, "init") == 0) {
+        printf("chg: init %s\r\n", charger_init() ? "ok" : "failed (no ACK)");
+        return;
+    }
+
+    if (strcmp(a1, "scan") == 0) {
+        charger_scan();
+        return;
+    }
+
+    if (strcmp(a1, "cur") == 0) {
+        if (a2 == NULL) {
+            printf("chg: ICHG = %u mA\r\n", (unsigned)charger_get_charge_current_ma());
+        } else {
+            uint16_t actual = 0U;
+            int ma = atoi(a2);
+
+            if (ma < 0) {
+                ma = 0;
+            }
+            if (charger_set_charge_current_ma((uint16_t)ma, &actual)) {
+                printf("chg: ICHG %d mA -> nearest %u mA\r\n", ma, (unsigned)actual);
+            } else {
+                printf("chg: set ICHG failed\r\n");
+            }
+        }
+        return;
+    }
+
+    if (strcmp(a1, "in") == 0) {
+        if (a2 == NULL) {
+            printf("chg: IINDPM = %u mA\r\n", (unsigned)charger_get_input_current_ma());
+        } else {
+            uint16_t actual = 0U;
+            int ma = atoi(a2);
+
+            if (ma < 0) {
+                ma = 0;
+            }
+            if (charger_set_input_current_ma((uint16_t)ma, &actual)) {
+                printf("chg: IINDPM %d mA -> nearest %u mA\r\n", ma, (unsigned)actual);
+            } else {
+                printf("chg: set IINDPM failed\r\n");
+            }
+        }
+        return;
+    }
+
+    if (strcmp(a1, "reg") == 0) {
+        long reg = strtol(a2 ? a2 : "0", NULL, 0);
+        uint8_t v = 0U;
+
+        if (reg >= 0 && reg <= 0xFF && charger_read_reg((uint8_t)reg, &v)) {
+            printf("chg: [0x%02lX] = 0x%02X\r\n", (unsigned long)reg, (unsigned)v);
+        } else {
+            printf("chg: read 0x%02lX failed\r\n", (unsigned long)reg);
+        }
+        return;
+    }
+
+    if (strcmp(a1, "set") == 0) {
+        long reg = strtol(a2 ? a2 : "0", NULL, 0);
+        long val = strtol(a3 ? a3 : "0", NULL, 0);
+
+        if (reg >= 0 && reg <= 0xFF && val >= 0 && val <= 0xFF &&
+            charger_write_reg((uint8_t)reg, (uint8_t)val)) {
+            printf("chg: [0x%02lX] <- 0x%02lX\r\n", (unsigned long)reg, (unsigned long)val);
+        } else {
+            printf("chg: write 0x%02lX failed\r\n", (unsigned long)reg);
+        }
+        return;
+    }
+
+    printf("chg: unknown subcommand %s\r\n", a1);
+}
+
+static void cmd_log(char *a1)
+{
+    if (a1 == NULL) {
+        printf("log: async logs %s\r\n", logctl_enabled() ? "on" : "off");
+        return;
+    }
+
+    if (strcmp(a1, "on") == 0) {
+        logctl_set(true);
+    } else if (strcmp(a1, "off") == 0) {
+        logctl_set(false);
+    } else {
+        printf("log: unknown %s\r\n", a1);
+    }
+}
+
 void console_poll(void)
 {
     /* 轮询取字节（USART1 由 log_init 配好，这里不重复初始化） */
@@ -320,6 +429,10 @@ void console_poll(void)
                     }
                 } else if (strcmp(cmd, "alarm") == 0) {
                     cmd_alarm(argv[1], argv[2]);
+                } else if (strcmp(cmd, "chg") == 0) {
+                    cmd_charger(argv[1], argv[2], argv[3]);
+                } else if (strcmp(cmd, "log") == 0) {
+                    cmd_log(argv[1]);
                 } else {
                     printf("unknown command: %s (type help)\r\n", cmd);
                 }

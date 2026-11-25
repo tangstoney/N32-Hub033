@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "voice.h"
+#include "logctl.h"
 #include "board.h"
 #include "tick.h"
 #include "n32wb033.h"
@@ -224,21 +225,33 @@ static void frame_dispatch(const uint8_t *f)
     if ((cmd == VOICE_CMD_PLAY || cmd == VOICE_CMD_PLAY_USB ||
          cmd == VOICE_CMD_SET_VOL || cmd == VOICE_CMD_STOP) && count == 1U) {
         /* 写命令应答：0 成功 / 1 命令错 / 2 无此文件 / 5 设备不在线 */
-        printf("[voice] ack %02X -> %u (%s)\r\n", cmd, p[0], voice_ack_str(p[0]));
+        if (logctl_enabled()) {
+            printf("[voice] ack %02X -> %u (%s)\r\n", cmd, p[0], voice_ack_str(p[0]));
+        }
     } else if (cmd == VOICE_CMD_QUERY_IDX && count == 2U) {
         s_idx_value = (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
         s_idx_valid = true;
-        printf("[voice] index = %u\r\n", s_idx_value);
+        if (logctl_enabled()) {
+            printf("[voice] index = %u\r\n", s_idx_value);
+        }
     } else if (cmd == VOICE_CMD_QUERY_CNT && count == 2U) {
         s_cnt_value = (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
         s_cnt_valid = true;
-        printf("[voice] audio count = %u\r\n", s_cnt_value);
+        if (logctl_enabled()) {
+            printf("[voice] audio count = %u\r\n", s_cnt_value);
+        }
     } else if (cmd == 0xC1U && count == 1U) {
-        printf("[voice] volume = %u\r\n", p[0]);
+        if (logctl_enabled()) {
+            printf("[voice] volume = %u\r\n", p[0]);
+        }
     } else if (cmd == 0xC2U && count == 1U) {
-        printf("[voice] status = %u (1 play / 2 stop / 3 pause)\r\n", p[0]);
+        if (logctl_enabled()) {
+            printf("[voice] status = %u (1 play / 2 stop / 3 pause)\r\n", p[0]);
+        }
     } else {
-        printf("[voice] frame cmd=%02X len=%u\r\n", cmd, count);
+        if (logctl_enabled()) {
+            printf("[voice] frame cmd=%02X len=%u\r\n", cmd, count);
+        }
     }
 }
 

@@ -92,6 +92,18 @@ extern "C" {
 #define BOARD_IMU_INT_PORT  GPIOC
 #define BOARD_IMU_INT_PIN   GPIO_PIN_6
 
+/* ---------------- 充电 SGM41512（与 IMU 共用 I2C1） -------------------
+ * I2C1 SCL=PA1 / SDA=PA0（AF4，400kHz）
+ * 7-bit 地址 0x1A（8-bit 写 0x34 / 读 0x35）
+ * 必须共地；SDA/SCL 4.7k 上拉到 3.3V（模块自带则不用外加） */
+#define BOARD_CHG_I2C       I2C1
+#define BOARD_CHG_CLK       RCC_APB1_PERIPH_I2C1
+#define BOARD_CHG_SCL_PORT  GPIOA
+#define BOARD_CHG_SCL_PIN   GPIO_PIN_1
+#define BOARD_CHG_SDA_PORT  GPIOA
+#define BOARD_CHG_SDA_PIN   GPIO_PIN_0
+#define BOARD_CHG_AF        GPIO_AF4
+
 /* ---------------- 初始化与开关 ---------------------------------------- */
 void board_init(void);
 
