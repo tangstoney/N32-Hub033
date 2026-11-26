@@ -69,6 +69,7 @@ SDK_ROOT=/path/to/NSING.N32WB033_Library.1.0.1 bash ci/build.sh
 5. **SDK 头文件的 `multi-line comment` 警告可忽略**，不是 error。
 6. 如果在 `root` 或其他用户下跑过，`build/` 可能属主不同；普通用户遇到 `rm -rf build` 权限问题时，先 `sudo rm -rf build` 一次。
 7. `Flash ≤ 512KB`、应用 `RAM ≤ 48KB`；BLE 栈固定占 `0x20000000–0x20003FFF` 的 16KB，不在应用链接区。
+8. 如果 WSL 的 `apt` 走 Windows 代理：WSL2 NAT 下 `127.0.0.1:7890` 不通；改用可达的镜像/代理，或在 `.wslconfig` 开 `networkingMode=mirrored`。
 
 ## 6. 验收标准
 
