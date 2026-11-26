@@ -68,6 +68,8 @@ build/rd91_hub033.elf / .hex / .bin / .map
 > BLE 栈固定占用 `0x20000000–0x20003FFF` 的 16KB，应用 RAM 从 `0x20004000`
 > 起 48KB。协议栈初始化和 `0xFFE0` 服务接入后，Flash/RAM 会再增长。
 > 链接用 newlib-nano；`printf` 不支持 `%f`。
+> WSL CI 用 Ubuntu 的 `gcc-arm-none-eabi 10.3.1` 构建，`text≈43.2KB`（newlib 差异），
+> 预算仍远低于 512KB；见 `docs/CI-handoff.md`。
 
 ---
 
@@ -258,3 +260,18 @@ log off / log on     # 关/开雷达/语音/报警/充电异步日志
 - **B09 报警业务**：已实现雷达条件 → `voice loop 8`、条件解除 → `voice stop`；
   `alarm on/off` 布防/撤防，`alarm smoke/panic on|off` 可模拟输入。
   注意：布防状态下报警业务占用语音口，手工测语音先 `alarm off`。
+
+---
+
+## 8. CI（WSL/Linux）
+
+只做构建，不烧录。已验证 WSL2 Ubuntu 22.04 + `arm-none-eabi-gcc 10.3.1`：
+
+```bash
+bash ci/bootstrap-wsl.sh
+bash ci/build.sh
+```
+
+SDK 不在仓库里，用 `SDK_ROOT` 指向 `NSING.N32WB033_Library.1.0.1`。
+构建前必须 `rm -rf build`（Windows 生成的 `.d` 含 `D:/` 路径，Linux make 会报
+`multiple target patterns`）。详见 [docs/CI-handoff.md](docs/CI-handoff.md)。
